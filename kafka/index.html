@@ -397,7 +397,7 @@ else if(s.step==='proc'&&s.stepT>=4){if(s.cur<s.rereadEnd)s.dup++;s.done=s.cur+1
 else if(s.step==='commit'&&s.stepT>=2){s.c=s.done;s.commits++;s.step=null}},
 view(s,api){const n=Math.min(s.leo,NC),base=s.leo-n,kinds=[],nums=[],busy=!s.down&&(s.step==='fetch'||s.step==='proc');
 for(let k=base;k<s.leo;k++){kinds.push(busy&&k===s.cur?'cur':k<s.c?'done':k<s.done?'unc':k<s.rereadEnd?'reread':'lag');nums.push(k)}api.log('p0',kinds,nums);
-const cl=v=>Math.max(0,Math.min(n,v-base)),marks=[{pos:cl(s.c),cls:'mk-noti',text:`${s.c<base?'◂ ':''}已提交 ${s.c}`,h:22,right:s.c<base}];if(!s.down)marks.push({pos:cl(s.pos),cls:'mk-pos',text:`已读到 ${s.pos}`,h:38,left:true});marks.push({pos:n,cls:'mk-leo',text:`LEO ${s.leo}`,h:54,left:true});api.logMarks('p0',marks);
+const cl=v=>Math.max(0,Math.min(n,v-base)),marks=[{pos:cl(s.c),cls:'mk-noti',text:`${s.c<base?'◂ ':''}已提交 ${s.c}`,h:22,right:true}];if(!s.down)marks.push({pos:cl(s.pos),cls:'mk-pos',text:`已读到 ${s.pos}`,h:64,right:true});marks.push({pos:n,cls:'mk-leo',text:`LEO ${s.leo}`,h:92,left:true});api.logMarks('p0',marks);
 api.node('inst',s.down?'down':'normal');
 api.badge('inst',s.down?'崩溃，重启中…':s.step==='fetch'?`① 拉取 #${s.cur}`:s.step==='proc'?`② 处理 #${s.cur}`:s.step==='commit'?`③ 提交 → ${s.done}`:'等待新消息',s.down?'red':s.step==='commit'?'green':s.step?'orange':'neutral');
 const cr=s.crash,nd=cr?cr.done-cr.c:0;let N;
@@ -440,7 +440,7 @@ if(s.step==='fetch'&&s.stepT>=2){s.step='s1';s.stepT=0;SF(s)?send():commit()}
 else if(s.step==='s1'&&s.stepT>=3){if(s.pending){s.pending=false;s.crash={k:s.cur,c:s.c,send:SF(s)};s.down=25;s.step=null;return}s.step='s2';s.stepT=0;SF(s)?commit():send()}
 else if(s.step==='s2'&&s.stepT>=3)s.step=null},
 view(s,api){const n=Math.min(s.leo,NC),base=s.leo-n,busy=!s.down&&!!s.step,[kinds,nums]=l5Kinds(s,n,base,busy);api.log('p0',kinds,nums);
-api.logMarks('p0',[{pos:Math.max(0,Math.min(n,s.c-base)),cls:'mk-noti',text:`${s.c<base?'◂ ':''}已提交 ${s.c}`,h:22,right:s.c<base},{pos:n,cls:'mk-leo',text:`LEO ${s.leo}`,h:54,left:true}]);
+api.logMarks('p0',[{pos:Math.max(0,Math.min(n,s.c-base)),cls:'mk-noti',text:`${s.c<base?'◂ ':''}已提交 ${s.c}`,h:22,right:s.c<base||s.c-base<3},{pos:n,cls:'mk-leo',text:`LEO ${s.leo}`,h:54,right:n<3}]);
 const k=s.cur,st=s.step,sf=SF(s),dup=l5Dup(s.sms),miss=missN(s);
 api.node('inst',s.down?'down':'normal');
 api.badge('inst',s.down?'崩溃，重启中…':st==='fetch'?`① 拉取 #${k}`:st==='s1'?(sf?`② 发短信 #${k}`:`② 提交 → ${k+1}`):st==='s2'?(sf?`③ 提交 → ${k+1}`:`③ 发短信 #${k}`):'等待新消息',s.down?'red':s.pending?'orange':st?'neutral':'neutral');
@@ -483,7 +483,7 @@ else if(s.step==='send'&&s.stepT>=3){if(s.key&&s.seen[k])s.blocked++;else{s.sms[
 else if(s.step==='record'&&s.stepT>=2){if(crashAt('A'))return;go('commit')}
 else if(s.step==='commit'&&s.stepT>=2){s.c=k+1;s.step=null}},
 view(s,api){const n=Math.min(s.leo,NC),base=s.leo-n,busy=!s.down&&!!s.step,[kinds,nums]=l5Kinds(s,n,base,busy);api.log('p0',kinds,nums);
-api.logMarks('p0',[{pos:Math.max(0,Math.min(n,s.c-base)),cls:'mk-noti',text:`${s.c<base?'◂ ':''}已提交 ${s.c}`,h:22,right:s.c<base},{pos:n,cls:'mk-leo',text:`LEO ${s.leo}`,h:54,left:true}]);
+api.logMarks('p0',[{pos:Math.max(0,Math.min(n,s.c-base)),cls:'mk-noti',text:`${s.c<base?'◂ ':''}已提交 ${s.c}`,h:22,right:s.c<base||s.c-base<3},{pos:n,cls:'mk-leo',text:`LEO ${s.leo}`,h:54,right:n<3}]);
 const k=s.cur,st=s.step,dup=l5Dup(s.sms);
 api.node('inst',s.down?'down':'normal');
 api.badge('inst',s.down?'崩溃，重启中…':st==='fetch'?`① 拉取 #${k}`:st==='check'?'② 查去重表':st==='send'?'③ 发短信（带 eventId）':st==='record'?'④ 写去重表':st==='commit'?(s.skipNow?'已处理过，跳过 → 提交':`⑤ 提交 → ${k+1}`):'等待新消息',s.down?'red':s.skipNow&&st==='commit'?'green':s.pending?'orange':'neutral');
@@ -604,7 +604,7 @@ view(s,api){const I=isr(s),base=Math.max(0,Math.max(...s.leo)-NC);
 [0,1,2].forEach(b=>{const kinds=[],nums=[];for(let k=base;k<base+NC;k++){nums.push(k);if(k>=s.leo[b]){kinds.push('gap');continue}
  kinds.push(s.down[b]?(s.lostCells[k]?'dup':'off'):b===s.L?(k<s.hw?'done':'lag'):'rep')}
  api.log('r'+b,kinds,b===s.L?nums:[]);
- const mk=[];if(b===s.L&&s.L>=0){const hp=Math.max(0,s.hw-base),lp=s.leo[b]-base;mk.push({pos:hp,cls:'mk-noti',text:`HW ${s.hw}`,h:20,right:hp<3});mk.push({pos:lp,cls:'mk-leo',text:`LEO ${s.leo[b]}`,h:40,right:lp<3})}api.logMarks('r'+b,mk);
+ const mk=[];if(b===s.L&&s.L>=0){const hp=Math.max(0,s.hw-base),lp=s.leo[b]-base;mk.push({pos:hp,cls:'mk-noti',text:`HW ${s.hw}`,h:20,right:hp<3});mk.push({pos:lp,cls:'mk-leo',text:`LEO ${s.leo[b]}`,h:42,right:true})}api.logMarks('r'+b,mk);
  api.layer('rl'+b,b===s.L?'on':'off');
  api.node('b'+b,s.down[b]?'down':'normal');
  api.badge('b'+b,s.down[b]?'DOWN':`${b===s.L?'Leader':'Follower'} · ${I.includes(b)?'在 ISR':'掉出 ISR'}`,s.down[b]?'red':I.includes(b)?'green':'orange')});
@@ -732,7 +732,7 @@ G.forEach((g,i)=>{if(!s.on[g.id]||(A&&g.id==='noti'&&s.down))return;const iv=g.i
 view(s,api){const d=day(s),w0=d-WD+1,cells=[],nums=[];const ref=s.c[A?'noti':'noti'];
 for(let k=w0;k<=d;k++){nums.push(k>=0&&(A||k%2===0)?D(k):'');if(k<0||k<s.startDay){cells.push('gap');continue}cells.push(ref>=(k+1)*MPD?'done':'lag')}
 api.log('p0',cells,nums);
-const pos=off=>Math.max(0,Math.min(WD,off/MPD-w0)),mk=[{pos:pos(startOff(s)),cls:'mk-pos',text:'log start',h:18,right:true}];
+const pos=off=>Math.max(0,Math.min(WD,off/MPD-w0)),mk=[{pos:pos(startOff(s)),cls:'mk-pos',text:'log start',h:96,right:true}];
 G.forEach((g,i)=>{if(!s.on[g.id])return;const gone=s.c[g.id]<startOff(s),ps=pos(s.c[g.id]),nm=g.svc.replace('（新服务）','');mk.push({pos:ps,cls:gone?'mk-pause':g.mk,text:gone?`${nm}（位置已被清理）`:nm,h:30+i*30,right:ps<2})});api.logMarks('p0',mk);
 api.layer('ana',s.on.ana?'on':'off');
 G.forEach(g=>{if(!s.on[g.id])return;const dn=A&&g.id==='noti'&&s.down;api.node(g.id,dn?'down':g.id==='inv'?'inv':g.id==='ana'?'ana':'normal');
@@ -1016,7 +1016,7 @@ return{title:'Notification 实例',ok:true,rows:[['策略',A?(s.strat==='inf'?'�
 
 /* ===== 第 15 课：Backpressure ===== */
 function lesson15Scene(mode){
-const A=mode==='A',PX=1,PY=3,PS=1.1,LX=2.8,CELL=.4,NC=10,LEND=LX+NC*CELL,GX=7.9,LIMX=10,DBX=11.9,DT=4.8,
+const A=mode==='A',PX=1,PY=3,PS=1.1,LX=2.8,CELL=.4,NC=10,LEND=LX+NC*CELL,GX=7.9,LIMX=10,DBX=12.9,DT=4.8,
 SLOT=[[GX,2.2],[GX,3],[GX,3.8]];
 const fresh=prev=>({t:0,mode:A?'none':prev?prev.mode:'limit',peak:prev?!!prev.peak:false,down:false,lag:0,succ:0,att:0,err:0,errTot:0,lat:20,r:0,hist:[],pAcc:0,cAcc:0,peakAt:-999,downAt:-999,upAt:-999});
 const IN=s=>s.peak?12000:3000,DBC=s=>s.mode==='batch'?9000:5000,LIM=s=>s.mode==='none'?Infinity:DBC(s)*.98,CC=15000;
@@ -1102,9 +1102,9 @@ view(s,api){const top=Math.ceil(s.leo/STEP)*STEP,base=Math.max(0,top-NC*STEP),po
   cells.push(k)}
  api.log('p0',cells,nums);
  const mk=[];
- if(A){const dep=s.v2!==null;mk.push({pos:pos(s.old),cls:dep?'mk-pause':'mk-noti',text:`notification-group ${Math.floor(s.old)}`,h:64});
-  if(dep)mk.push({pos:pos(s.v2),cls:'mk-ana',text:`notification-v2 ${Math.floor(s.v2)}`,h:42});
-  mk.push({pos:pos(s.leo),cls:'mk-leo',text:`LEO ${s.leo}`,h:78,right:true});
+ if(A){const dep=s.v2!==null;mk.push({pos:pos(s.old),cls:dep?'mk-pause':'mk-noti',text:`notification-group ${Math.floor(s.old)}`,h:86});
+  if(dep)mk.push({pos:pos(s.v2),cls:'mk-ana',text:`notification-v2 ${Math.floor(s.v2)}`,h:58});
+  mk.push({pos:pos(s.leo),cls:'mk-leo',text:`LEO ${s.leo}`,h:100,right:true});
   api.logMarks('p0',mk);api.layer('v2',dep?'on':'off');
   api.node('old',dep?'idle':'normal');api.badge('old',dep?`已下线 · Lag ${fmt(s.leo-s.old)}`:`Lag ${fmt(s.leo-s.old)}`,dep?'red':'orange');
   if(dep){api.badge('v2',`Lag ${fmt(s.leo-s.v2)}`,'green')}
@@ -1177,7 +1177,7 @@ view(s,api){const leo=s.msgs.length,minC=Math.min(...G.map(g=>s.c[g.id])),base=M
  for(let i=0;i<NC;i++){const o=base+i,v=s.msgs[o];if(v===undefined){cells.push('gap');nums.push('');continue}const stuckHere=G.some(g=>s.stuck[g.id]===o);
   cells.push(stuckHere?'dup':o<minC?(v===2?'cur':'done'):v===2?(A?'dup':'new'):'lag');nums.push(v===2?'v2':'v1')}
  api.log('p0',cells,nums);
- api.logMarks('p0',G.map((g,i)=>({pos:Math.max(0,Math.min(NC,s.c[g.id]-base)),cls:g.mk,text:s.stuck[g.id]!==undefined?`${g.name} 卡在 #${s.c[g.id]}`:g.name,h:24+i*28,right:true})).concat([{pos:Math.min(NC,leo-base),cls:'mk-leo',text:`${leo-base>NC?'▸ ':''}LEO ${leo}`,h:A?80:56,right:true}]));
+ api.logMarks('p0',G.map((g,i)=>({pos:Math.max(0,Math.min(NC,s.c[g.id]-base)),cls:g.mk,text:s.stuck[g.id]!==undefined?`${g.name.replace('-group','')} 卡在 #${s.c[g.id]}`:g.name,h:54+i*30,right:s.c[g.id]-base<NC/2})).concat([{pos:Math.min(NC,leo-base),cls:'mk-leo',text:`${leo-base>NC?'▸ ':''}LEO ${leo}`,h:A?100:72,right:true}]));
  G.forEach(g=>{const st=s.stuck[g.id]!==undefined,lag=leo-s.c[g.id];api.node(g.id,st?'down':'inv');api.badge(g.id,st?`解析失败 · Lag ${lag}`:A?`Lag ${lag}`:`读 v${s.cv} · Lag ${lag}`,st?'red':'green')});
  api.badge('prod',`写 v${s.pv}`,s.pv===2?(A&&s.act!=='rollback'?'red':'green'):'neutral');
  const recent=s.t-s.actAt<160,nBad=s.msgs.filter(v=>v===2).length;let N;
@@ -1391,8 +1391,8 @@ view(s,api){let N;
   cells.push(x<s.ls?'miss':e.k==='ord'?'unc':x<s.r?'done':'lag');nums.push(e.k==='out'?e.eid.slice(4):'')}
  api.log('b',cells,nums);
  const mk=[];if(s.ls>base)mk.push({pos:Math.min(BN,s.ls-base),cls:'mk-pos',text:'binlog 最早',h:18,right:true});
- mk.push({pos:Math.max(0,Math.min(BN,s.saved-base)),cls:s.failed?'mk-pause':'mk-noti',text:s.failed?'已保存位置（已被清除）':'已保存位置',h:42,right:true});
- if(!s.failed)mk.push({pos:Math.max(0,Math.min(BN,s.r-base)),cls:'mk-ana',text:'读到',h:66,right:true});api.logMarks('b',mk);
+ mk.push({pos:Math.max(0,Math.min(BN,s.saved-base)),cls:s.failed?'mk-pause':'mk-noti',text:s.failed?'已保存（已被清除）':'已保存',h:24,right:true});
+ if(!s.failed)mk.push({pos:Math.max(0,Math.min(BN,s.r-base)),cls:'mk-ana',text:'读到',h:62,right:true});api.logMarks('b',mk);
  const kb=s.kev.slice(-KN),kbase=s.kev.length-kb.length;api.log('k',[...Array(KN).keys()].map(i=>{const r=kb[i-(KN-kb.length)];if(!r)return 'gap';return s.kev.findIndex(x=>x.eid===r.eid)<kbase+i-(KN-kb.length)?'reread':'cur'}),[...Array(KN).keys()].map(i=>{const r=kb[i-(KN-kb.length)];return r?r.eid.slice(4):''}));
  api.badge('svc','下单','neutral');api.badge('mysql','写 binlog','green');
  api.node('w',s.down||s.failed?'down':'ana');api.badge('w',s.failed?'FAILED：binlog 位置不存在':s.down?(s.purge?'停机中':'💥 重启中'):'RUNNING',s.down||s.failed?'red':'green');
@@ -1400,7 +1400,7 @@ view(s,api){let N;
  const recent=s.t-s.actAt<220;
  if(s.failed)N=['④ binlog 过期：Connector 起不来','red','Connector 重启后发现，它保存的 binlog 位置已经被 MySQL 清理了（灰色格子），无法接着读，状态变成 FAILED（和第 9 课的 OffsetOutOfRange 一个道理）。点「重新做快照」。'];
  else if(s.down&&s.purge)N=['③ Connector 停机太久','orange','Connector 停了 2 天，可 MySQL 的 binlog 只保留 1 天（binlog_expire_logs_seconds）。订单还在不停地写，旧的 binlog 文件会被删掉……'];
- else if(s.down)N=['② 发完、保存位置之前崩溃','orange','Connector 已经把几条 outbox 事件发到 Kafka，但读到的 binlog 位置还没来得及保存（「读到」在「已保存位置」右边），就崩溃了……'];
+ else if(s.down)N=['② 发完、保存位置之前崩溃','orange','Connector 已经把几条 outbox 事件发到 Kafka，但读到的 binlog 位置还没来得及保存（「读到」在「已保存」右边），就崩溃了……'];
  else if(recent&&s.act==='snap')N=['⑤ 重新快照：中间的事件错过了','red',`重新快照后从当前位置继续，但中间 ${s.lostLast} 条 outbox 事件已经错过：outbox 行发完通常会被删除，快照也补不回来，只能靠业务对账修复。要监控 Connector 的状态和延迟（比如告警 FAILED），binlog 保留期要大于可能的最长停机时间。`];
  else if(recent&&s.act==='restart')N=['③ 重启后重发：CDC 也是至少一次','green',`重启后从上次保存的 binlog 位置重读，已经发过的事件又发了一次（黄色，已重复 ${s.dup} 条）。CDC 和第 19 课的 Publisher 一样是「至少一次」，Consumer 按 eventId 去重（第 19 课），业务只生效一次。`];
  else N=['① CDC：读 binlog，不轮询','green','MySQL 把每次提交的变更按顺序写进 binlog。Debezium 作为 Kafka Connect 的 Source Connector，像一个 MySQL 从库一样读 binlog：只挑 outbox_events 表的 INSERT（有编号的格子），orders 表的变更（浅紫色）被过滤掉；再由 Outbox Event Router 变成业务事件，按订单号做 Key 写进 order-events。没有轮询，延迟通常在毫秒到秒级，也不用自己维护 Publisher。'];
@@ -1620,7 +1620,7 @@ tick(s,api){s.t++;
   if(s.mv.prog>=MV){const{p,from}=s.mv;s.has[3][p]=true;s.has[from][p]=false;s.mv=null;s.done++;fixLead(s);if(s.done===PLAN.length)s.actAt=s.t}}},
 view(s,api){api.layer('b4',s.b4?'on':'off');
  RY.forEach((y,b)=>{if(b===3&&!s.b4)return;const dn=b===s.down;api.log('b'+b,[...Array(NP).keys()].map(p=>s.mv&&s.mv.p===p&&b===3?'unc':!s.has[b][p]?'gap':dn?'miss':s.lead[p]===b?'cur':'done'),[...Array(NP).keys()].map(p=>'P'+p));
-  const disk=Math.round(cnt(s,b)*80/6);api.node('n'+b,dn?'down':'inv');api.logMarks('b'+b,[{pos:NP,cls:dn?'mk-pause':disk>=75?'mk-pos':'mk-inv',text:dn?`Broker ${b+1} · 宕机`:`Broker ${b+1} · 磁盘 ${disk}%`,h:20,right:true}])});
+  const disk=Math.round(cnt(s,b)*80/6);api.node('n'+b,dn?'down':'inv');api.logMarks('b'+b,[{pos:NP+.6,cls:dn?'mk-pause':disk>=75?'mk-pos':'mk-inv',text:dn?`Broker ${b+1} · 宕机`:`Broker ${b+1} · 磁盘 ${disk}%`,h:18,right:true}])});
  const U=urp(s),O=offline(s),disks=[0,1,2,3].filter(b=>b<3||s.b4).map(b=>Math.round(cnt(s,b)*80/6)),recent=s.t-s.actAt<180;let N;
  if(s.down>=0)N=['④ Broker 宕机：UnderReplicatedPartitions 报警','red',`Broker ${s.down+1} 宕机，它上面的 Leader 已经自动切到别的副本（第 6 课），读写没停，所以 OfflinePartitionsCount 还是 ${O}。可这些 Partition 现在只剩 2 个副本，UnderReplicatedPartitions = ${U}：再坏一台，有的 Partition 就只剩 1 个副本，满足不了 min.insync.replicas = 2，acks=all 的写入会失败。这是 Broker 侧最先要告警的指标。`];
  else if(s.mv||s.q.length)N=['③ 分区重分配：先复制，再切换','orange',`用 kafka-reassign-partitions.sh 把 P${s.mv?s.mv.p:''} 的一个副本挪到 Broker 4：新副本（浅紫色）先从 Leader 把数据完整复制一遍，追上后进入 ISR，再删掉旧副本。迁移期间这个 Partition 会被算进 UnderReplicatedPartitions（现在是 ${U}），这是正常的。复制会占用网络和磁盘，要设限速（throttle）。进度 ${s.done} / ${PLAN.length}。`];
