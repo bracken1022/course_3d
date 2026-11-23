@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RabbitMQ 入门互动课</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 友好清晰的技术课，和参考图同一套等距场景语言
+   IDEA: 一座等距视角的消息分拣中心：生产者、交换机、队列传送带、消费者都是摆在地面网格上的方块
+   PICTURE: 每课顶部的等距场景，小立方体沿地面轨道流动，在传送带格子里排队，落到消费者顶上被处理
+   COLOUR and TYPE: 浅薰衣草地面 #EEF0FA、蓝紫 #4B53D6、琥珀色生产者、蓝色消费者、白色浮动标签；Inter + Noto Sans SC
+   LAYOUT: 课程头 → 目录条 → 课标题 → 工具栏 + 等距场景 + 状态卡 + 统计卡 → 讲解 → 测验 */
+:root,:root[data-theme=dark],:root[data-theme=light]{color-scheme:light;--bg:#ffffff;--ink:#141A38;--mute:#4A5175;--line:#DCDFF2;--panel:#F6F7FD;--floor:#EEF0FA;--ac:#4B53D6;--act:#3F47C8;--ok:#1E7A5A;--warn:#B9650F;--bad:#C9353B}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 Inter,"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;overflow-x:clip}
+pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}html{scroll-padding-top:72px}
+a{color:var(--act)}
+.top{background-color:var(--floor);background-image:repeating-linear-gradient(26.565deg,#DDE1F4 0 1px,transparent 1px 38px),repeating-linear-gradient(-26.565deg,#DDE1F4 0 1px,transparent 1px 38px);padding:clamp(28px,4vw,52px) max(5vw,16px) 26px;border-bottom:1px solid var(--line)}
+.top .in,.wrap{max-width:1120px;margin:0 auto}
+.top .card{display:inline-block;max-width:780px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px 24px;box-shadow:0 16px 40px rgba(40,48,110,.10)}
+.top .kick{font-size:13px;font-weight:800;color:var(--ac)}
+.top h1{font-size:clamp(30px,4.6vw,46px);line-height:1.1;margin:6px 0 8px;font-weight:900;text-wrap:balance}
+.top p{margin:0;font-size:16px;color:var(--mute)}
+.bar{margin-top:16px;display:flex;align-items:center;gap:12px;font-weight:700;font-size:14px}
+.track{flex:1;max-width:320px;height:8px;background:#ECEEF8;border-radius:8px;overflow:hidden}.track i{display:block;height:100%;background:var(--ac);width:0;transition:width .4s}
+.lnav{display:flex;gap:8px;padding:12px max(5vw,16px);border-bottom:1px solid var(--line);background:#fff;z-index:5}
+@media(min-width:900px){.lnav{position:sticky;top:0}}
+.lnav a{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid #D5D8EE;border-radius:12px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:600;white-space:nowrap;background:#fff}
+.lnav a b{color:var(--ac)}
+.lnav a[aria-current=page]{background:var(--ac);color:#fff;border-color:var(--ac)}.lnav a[aria-current=page] b{color:#fff}
+.lnav a.done::after{content:"";width:8px;height:8px;border-radius:50%;background:#2BA88A}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.lhead{padding:clamp(24px,3vw,40px) 0 16px}
+.kick{color:var(--ac);font-weight:800;font-size:14px}
+.lhead h2{font-size:clamp(28px,4vw,40px);line-height:1.12;margin:4px 0 8px;font-weight:900;text-wrap:balance}
+.lhead p{margin:0;color:var(--mute);font-size:17px}
+.ctrls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.b{min-height:48px;padding:0 18px;border-radius:12px;border:1px solid #D5D8EE;background:#fff;color:#1B2140;font:inherit;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(40,48,110,.06)}
+.b.pri{border-color:#B9BDF0;color:var(--act);background:#F3F4FE}
+.b:active{transform:translateY(1px)}
+.seg{display:inline-flex;align-items:stretch;border:1px solid #D5D8EE;border-radius:12px;overflow:hidden;background:#fff;min-height:48px}
+.seg span{display:flex;align-items:center;padding:0 12px;font-size:13px;color:var(--mute);border-right:1px solid #E4E6F5}
+.seg button{border:0;background:none;color:#1B2140;font:inherit;font-size:15px;padding:0 14px;cursor:pointer;font-weight:600}
+.seg button[aria-pressed=true]{background:var(--ac);color:#fff}
+.keyin{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+.keyin input{flex:1 1 220px;min-height:48px;font:16px "JetBrains Mono",monospace;padding:0 14px;border-radius:12px;border:1px solid #C9CDEB;background:#fff;color:var(--ink)}
+.keyin .b{background:var(--ac);color:#fff;border-color:var(--ac)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+.chips button{min-height:36px;border-radius:999px;border:1px solid #D5D8EE;background:#fff;color:var(--act);font:13px "JetBrains Mono",monospace;padding:0 12px;cursor:pointer}
+.scene{background:#F4F5FC;border:1px solid var(--line);border-radius:20px}
+.stage{position:relative;margin:0 auto}.sv{display:block}
+.sv text{font-family:Inter,"Noto Sans SC",sans-serif}
+.fl{font-style:italic;font-weight:600;fill:#5A6190}
+.rt{fill:none;stroke:#8C91CC;stroke-width:2;stroke-linejoin:round}.rt.off{stroke-dasharray:6 6;opacity:.45}
+.nd{cursor:pointer}
+.ov{position:absolute;inset:0;pointer-events:none}
+.pill{pointer-events:auto;position:absolute;transform:translate(-50%,-100%);background:#fff;border:1px solid #D5D8EE;border-radius:9px;padding:4px 10px;line-height:1.3;text-align:center;white-space:nowrap;color:#1B2140;box-shadow:0 4px 12px rgba(40,48,110,.08);font:inherit;cursor:pointer}
+.pill b{display:block;font-size:13px}.pill small{display:block;font-size:12px;color:var(--mute)}
+.pill.below{transform:translate(-50%,8px)}
+.pill.key.below{transform:translate(-50%,10px)}
+.pill.key{font:12px/1.4 "JetBrains Mono",monospace;color:var(--act);padding:2px 8px;border-radius:7px;box-shadow:none}
+.bd{display:inline-block;margin-top:3px;padding:1px 8px;border-radius:20px;font-size:12px;font-weight:700;color:#fff}
+.bd.ok{background:var(--ok)}.bd.warn{background:var(--warn)}.bd.bad{background:var(--bad)}.bd.idle{background:#8C91CC}
+.swipe{font-size:13px;color:var(--mute);text-align:center;margin-top:6px}
+.hint{margin-top:14px;padding:14px 16px;border-radius:12px;font-size:15px;line-height:1.65;border:1px solid;font-weight:600}
+.hint.info{background:var(--panel);border-color:var(--line);color:#1B2140}.hint.ok{background:#E8F6EF;border-color:#B6DECB;color:#1E6B4F}.hint.warn{background:#FFF6E6;border-color:#F1D4A4;color:#8A4B07}.hint.bad{background:#FFF0EF;border-color:#F3C4C2;color:#A8292F}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.stats div{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;color:var(--mute)}
+.stats b{display:block;font-size:24px;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.stats .bad b{color:var(--bad)}.stats .warn b{color:var(--warn)}
+.info{margin-top:12px;font-size:15px;background:#fff;border-radius:14px;padding:14px 16px;border:1px solid var(--line);box-shadow:0 8px 24px rgba(40,48,110,.06)}
+.info b{color:var(--act)}
+.body h3{font-size:22px;line-height:1.25;margin:36px 0 10px;font-weight:800}
+.body p,.body li{max-width:44em}
+.body ul{padding-left:1.2em}.body li{margin:4px 0}
+.body table{border-collapse:collapse;width:100%;font-size:15px;margin:8px 0}
+.body th,.body td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+.body th{font-size:14px;color:var(--mute);font-weight:600}
+.body td:first-child{font-weight:600;white-space:nowrap}
+.call{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:16px 0}
+.call b{color:var(--act)}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em;background:#EEF0FA;padding:1px 5px;border-radius:5px}
+.code{margin:12px 0;border-radius:14px;overflow:hidden;background:#141A38}
+.code .tabs{display:flex;align-items:center;gap:2px;padding:6px 6px 0;background:#1F2650}
+.code .tabs button{min-height:36px;border:0;border-radius:8px 8px 0 0;background:none;color:#B8BDE0;font:13px Inter,"Noto Sans SC",sans-serif;padding:0 12px;cursor:pointer}
+.code .tabs button[aria-pressed=true]{background:#141A38;color:#fff}
+.code .tabs .cp{margin-left:auto;border-radius:8px;border:1px solid #3A4270;min-height:32px;margin-bottom:6px}
+.code pre{margin:0;padding:14px 16px;color:#EEF0FA;font:13.5px/1.65 "JetBrains Mono",monospace}
+.code pre code{background:none;padding:0;overflow-wrap:normal}
+.tester{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:14px}
+.tester label{font-size:13px;color:var(--mute)}.tester input{width:100%;min-height:44px;font:16px "JetBrains Mono",monospace;padding:0 10px;border-radius:10px;border:1px solid #C9CDEB;background:#fff;color:var(--ink)}
+.tester output{grid-column:1/-1;font-weight:700}
+.quiz{margin:44px 0 8px;border-top:2px solid var(--ink);padding-top:16px}
+.quiz h3{margin:0 0 4px;font-size:22px;font-weight:800}.quiz>p{margin:0;color:var(--mute)}
+.q{padding:18px 0;border-bottom:1px solid var(--line)}
+.q .qt{font-weight:700;margin-bottom:10px}
+.q .opts{display:grid;gap:8px}
+.q .opts button{text-align:left;min-height:46px;padding:8px 14px;border-radius:12px;border:1px solid #D5D8EE;background:#fff;color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.q .opts button.ok{border-color:var(--ok);background:#E8F6EF;font-weight:700}
+.q .opts button.bad{border-color:var(--bad);color:var(--bad);text-decoration:line-through}
+.q .ex{margin-top:10px;font-size:15px;color:var(--mute)}.q .ex b{color:var(--ok)}.q .ex b.no{color:var(--bad)}
+.pn{display:flex;justify-content:space-between;gap:12px;margin:36px 0 64px;flex-wrap:wrap}
+.pn a{display:inline-flex;align-items:center;min-height:48px;padding:0 20px;border-radius:12px;border:1px solid #D5D8EE;color:var(--ink);text-decoration:none;font-weight:700;background:#fff}
+.pn a.nx{background:var(--ac);border-color:var(--ac);color:#fff;margin-left:auto}
+.done-msg{background:#E8F6EF;border:1px solid #B6DECB;color:#1E6B4F;border-radius:14px;padding:16px 18px;margin-top:16px;font-weight:700}
+@media(max-width:600px){table{font-size:13px}.body td:first-child{white-space:normal}.tester{grid-template-columns:minmax(0,1fr)}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.track i{transition:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="in"><div class="card">
+  <div class="kick">消息分拣中心系列 · 入门</div>
+  <h1>RabbitMQ 入门：8 节互动课</h1>
+  <p>每课一个可以亲手操作的等距场景，加一组小测验。从“为什么需要消息队列”一路走到可靠投递与实战选型。</p>
+  <div class="bar"><span id="pt">已完成 0 / 8 课</span><div class="track"><i id="pb"></i></div></div>
+</div></div></header>
+<nav class="lnav scroll" id="nav" aria-label="课程目录"></nav>
+<main class="wrap" style="padding:0 max(5vw,16px)"><div id="lesson"></div></main>
+
+<script>
+{
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PAL=['#ff6600','#2563eb','#db2777','#0d9488','#7c3aed','#ca8a04'];
+const colorFor=k=>{let h=7;for(const ch of String(k))h=(h*31+ch.charCodeAt(0))>>>0;return PAL[h%PAL.length]};
+function topicMatch(p,k){const P=p.split('.'),K=k.split('.');const m=(i,j)=>{if(i===P.length)return j===K.length;if(P[i]==='#'){for(let x=j;x<=K.length;x++)if(m(i+1,x))return true;return false}if(j===K.length)return false;return(P[i]==='*'||P[i]===K[j])&&m(i+1,j+1)};return m(0,0)}
+
+const INFO={
+P:'<b>生产者 Producer</b>（琥珀色方块）：创建并发送消息的应用。它只把消息交给交换机，并不知道消息最后进了哪个队列、被谁处理。',
+X:'<b>交换机 Exchange</b>（深色台子）：接收生产者的消息，按自己的类型（default / direct / fanout / topic / headers）和绑定规则，把消息复制到零个或多个队列。交换机本身不存消息，没有匹配的队列时消息就被丢弃。',
+Q:'<b>队列 Queue</b>：真正存放消息的缓冲区（白色传送带），先进先出：消息从左端进入，从靠近消费者的右端出去，投递给消费者并得到确认（ack）后才删除。',
+C:'<b>消费者 Consumer</b>：订阅队列并处理消息的应用（蓝色方块）。正在处理的消息放在方块顶上，下方蓝条是处理进度；处理完发送 ack，RabbitMQ 才会删除这条消息。徽章显示已完成数和“手上”未确认的数量。',
+bind:'<b>绑定键 Binding key</b>：交换机到队列这条线上的规则。direct 要求 routing key 完全相等，topic 支持 * 和 # 通配。虚线表示没有绑定，消息不会走这条路。',
+B:'<b>Broker</b>：RabbitMQ 服务器本身。交换机、队列、绑定都住在 broker 里；地面上的紫色虚线区域就是它的边界。生产者和消费者都是 broker 之外的客户端。'
+};
+
+/* ---------- 等距模拟器引擎 ---------- */
+const MSG=[{top:'#FFD08A',left:'#F2A33A',right:'#C47D1C'},{top:'#8DE0C2',left:'#2BA88A',right:'#1E7A63'},{top:'#F6B3D0',left:'#E0679E',right:'#B84A7C'},{top:'#C9B8FF',left:'#9470F0',right:'#6E4FC4'},{top:'#A8D8FF',left:'#4DA3E8',right:'#2F7BBF'}];
+const CUBE={amber:{top:'#FFD08A',left:'#F2A33A',right:'#C47D1C'},blue:{top:'#9CA2F8',left:'#6A72EA',right:'#4E55C9'},red:{top:'#F6A7A9',left:'#E0565B',right:'#B83E44'},navy:{top:'#5A6190',left:'#3A4166',right:'#262C4E'},plinth:{top:'#FFFFFF',left:'#D7DAF0',right:'#C3C8E8',stroke:'#CDD1EC'}};
+const kIdx=k=>{let h=7;for(const ch of String(k))h=(h*31+ch.charCodeAt(0))>>>0;return h%MSG.length};
+const GLOB={speed:1,paused:false};
+
+function makeSim(host,cfg,onInfo){
+  host.innerHTML='<div class="scene scroll"><div class="stage"><svg class="sv" role="img" aria-label="等距消息流动场景"><defs><marker id="ah" orient="auto" markerWidth="8" markerHeight="8" refX="5" refY="3" markerUnits="userSpaceOnUse" overflow="visible"><path d="M0 0 L6 3 L0 6 Z" fill="#8C91CC"/></marker></defs><g class="st"></g><g class="tk"></g></svg><div class="ov"></div></div></div><div class="swipe" hidden>场景比屏幕宽，左右滑动可以看到全部</div><div class="hint info" aria-live="polite"></div><div class="stats"></div>';
+  const scene=$('.scene',host),stage=$('.stage',host),svg=$('svg',host),st=$('.st',host),tk=$('.tk',host),ov=$('.ov',host),hintEl=$('.hint',host),statsEl=$('.stats',host);
+  const hideX=!!cfg.hideX,xType=cfg.xType||'default';
+  const S={cfg,prefetch:cfg.prefetch??1,autoAck:!!cfg.autoAck,durable:cfg.durable!==false,
+    queues:cfg.queues.map(q=>({name:q.name,keys:q.keys||[],msgs:[],rr:0,bound:true})),
+    cons:cfg.consumers.map((c,i)=>({id:'c'+i,q:c.q,name:c.name,speed:c.speed,n:0,inbox:[],cur:null,doneAt:0,t0:0,done:0,down:false})),
+    tokens:[],sched:[],pub:0,done:0,lost:0,drop:0,seq:0,flash:0,t:0};
+  const CX=10.2,QB=8;
+  const qy=i=>S.queues.length===1?0:(i-(S.queues.length-1)/2)*3.1;
+  const cy=c=>{const same=S.cons.filter(x=>x.q===c.q),j=same.indexOf(c),m=same.length;return qy(c.q)+(m===1?0:(j-(m-1)/2)*1.7)};
+  let K=40,ox=0,oy=0,dirty=true,box={};
+  const P=(gx,gy,z=0)=>[ox+(gx-gy)*K,oy+(gx+gy)*K/2-z*K];
+  const pp=(pts,z=0)=>pts.map(p=>{const q=P(p[0],p[1],z);return q[0].toFixed(1)+','+q[1].toFixed(1)}).join(' ');
+  const R={PX:()=>[[0.9,0],[2.0,0]],XQ:i=>[[3.8,0],[4.35,0],[4.35,qy(i)],[4.95,qy(i)]],PQ:i=>[[0.9,0],[4.35,0],[4.35,qy(i)],[4.95,qy(i)]],
+    QC:c=>[[8.05,qy(c.q)],[8.85,qy(c.q)],[8.85,cy(c)],[9.45,cy(c)]],DROP:()=>[[2.9,0.7],[2.9,2.6]]};
+  function at(path,f){let segs=[],tot=0;for(let i=1;i<path.length;i++){const d=Math.abs(path[i][0]-path[i-1][0])+Math.abs(path[i][1]-path[i-1][1]);segs.push(d);tot+=d}
+    let dist=f*tot;for(let i=0;i<segs.length;i++){if(dist<=segs[i]||i===segs.length-1){const k=segs[i]?Math.min(1,dist/segs[i]):1;return[path[i][0]+(path[i+1][0]-path[i][0])*k,path[i][1]+(path[i+1][1]-path[i][1])*k]}dist-=segs[i]}return path[path.length-1]}
+  function cube(gx,gy,sx,sy,h,col,z0=0){
+    const A=P(gx-sx/2,gy-sy/2,z0+h),B=P(gx+sx/2,gy-sy/2,z0+h),C=P(gx+sx/2,gy+sy/2,z0+h),D=P(gx-sx/2,gy+sy/2,z0+h),B0=P(gx+sx/2,gy-sy/2,z0),C0=P(gx+sx/2,gy+sy/2,z0),D0=P(gx-sx/2,gy+sy/2,z0);
+    const e=col.edge?` stroke="${col.edge}" stroke-width="1.5" stroke-linejoin="round"`:'';
+    const pg=(pts,f,s)=>`<polygon points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="${f}"${s?` stroke="${s}" stroke-width="1"`:e}/>`;
+    return pg([D,C,C0,D0],col.left)+pg([C,B,B0,C0],col.right)+pg([A,B,C,D],col.top,col.stroke);
+  }
+  const mcol=m=>m.re?{...MSG[m.ci],edge:'#C9353B'}:MSG[m.ci];
+  function fit(){
+    const ys=[0,...S.queues.map((_,i)=>qy(i)),...S.cons.map(cy)];
+    const a=-1.3,b=11.6,c=Math.min(...ys)-1.5,d=Math.max(...ys)+1.5,avail=scene.clientWidth||720,wu=(b-a)+(d-c);
+    K=Math.max(28,Math.min(58,(avail-24)/wu));
+    const need=wu*K+24,W=Math.max(avail-2,need);
+    ox=12+(W-need)/2-(a-d)*K;oy=84-Math.min((a+c)/2,-1.7)*K;
+    const H=oy+((b+d)/2)*K+18;
+    stage.style.width=W+'px';$('.swipe',host).hidden=need<=avail;stage.style.height=H+'px';svg.setAttribute('width',W);svg.setAttribute('height',H);
+    box={a,b,c,d};
+  }
+  function draw(){
+    fit();const{a,b,c,d}=box;let h='';
+    h+=`<polygon points="${pp([[a,c],[b,c],[b,d],[a,d]])}" fill="#EEF0FA"/><g stroke="#DDE1F4" stroke-width="1">`;
+    for(let x=Math.ceil(a);x<=b;x++){const p=P(x,c),q=P(x,d);h+=`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}"/>`}
+    for(let y=Math.ceil(c);y<=d;y++){const p=P(a,y),q=P(b,y);h+=`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}"/>`}
+    h+='</g>';
+    const za=hideX?4.15:1.85,zb=8.5,zc=c+0.55,zd=d-0.55;
+    h+=`<g data-n="B" class="nd"><polygon class="zone" points="${pp([[za,zc],[zb,zc],[zb,zd],[za,zd]])}" fill="#E7E9FB" fill-opacity=".75" stroke="#6E75C4" stroke-width="1.5" stroke-dasharray="7 6"/>`;
+    const tp=P(za+0.3,zd-0.2);h+=`<text class="fl" font-size="${Math.max(11,Math.min(14,K*.26)).toFixed(1)}" transform="matrix(0.894 0.447 -0.894 0.447 ${tp[0].toFixed(1)} ${tp[1].toFixed(1)})">Broker · RabbitMQ</text></g>`;
+    const route=(pts,off)=>`<polyline class="rt${off?' off':''}" points="${pp(pts)}" marker-end="url(#ah)"/>`;
+    if(!hideX){h+=route(R.PX());S.queues.forEach((q,i)=>h+=route(R.XQ(i),!q.bound))}else S.queues.forEach((q,i)=>h+=route(R.PQ(i)));
+    S.cons.forEach(cn=>h+=route(R.QC(cn),cn.down));
+    const objs=[];
+    objs.push({d:0,s:`<g data-n="P" class="nd">${cube(0,0,1.9,1.9,.12,CUBE.plinth)}${cube(0,0,1.1,1.1,1.1,CUBE.amber,.12)}</g>`});
+    if(!hideX)objs.push({d:2.9,s:`<g data-n="X" class="nd">${cube(2.9,0,1.9,1.9,.12,CUBE.plinth)}${cube(2.9,0,1.45,1.45,.5,CUBE.navy,.12)}</g>`});
+    S.queues.forEach((q,i)=>{const y=qy(i);let s=cube(6.5,y,3.1,1,.18,CUBE.plinth);
+      for(let j=0;j<6;j++){const gx=QB-.25-j*.5;s+=`<polygon points="${pp([[gx-.21,y-.36],[gx+.21,y-.36],[gx+.21,y+.36],[gx-.21,y+.36]],.18)}" fill="#F6F7FD" stroke="#DDE1F4"/>`}
+      for(let j=Math.min(6,q.msgs.length)-1;j>=0;j--)s+=cube(QB-.25-j*.5,y,.36,.36,.36,mcol(q.msgs[j]),.18);
+      objs.push({d:6.5+y,s:`<g data-n="Q" class="nd">${s}</g>`})});
+    S.cons.forEach(cn=>{const y=cy(cn);objs.push({d:CX+y,s:`<g data-n="C" class="nd">${cube(CX,y,1.7,1.7,.12,CUBE.plinth)}${cube(CX,y,1,1,1,cn.down?CUBE.red:CUBE.blue,.12)}</g>`})});
+    objs.sort((x,y)=>x.d-y.d).forEach(o=>h+=o.s);
+    st.innerHTML=h;
+    const pill=(gx,gy,z,inner,kind,cls='')=>{const p=P(gx,gy,z);return `<button type="button" class="pill ${cls}" data-n="${kind}" style="left:${p[0].toFixed(1)}px;top:${p[1].toFixed(1)}px">${inner}</button>`};
+    let o=pill(0,0,1.4,`<b>${esc(cfg.pName||'生产者')}</b><small>Producer</small>`,'P');
+    if(!hideX)o+=pill(2.9,0,.78,`<b>${esc(cfg.xName)}</b><small>${xType==='default'?'默认交换机':xType+' 交换机'}</small>`,'X');
+    S.queues.forEach((q,i)=>{const y=qy(i),more=q.msgs.length>6?` · 另有 ${q.msgs.length-6} 条`:'';
+      o+=pill(5.45,y,.3,`<b>${esc(q.name)}</b><small>就绪 ${q.msgs.length}${more}</small>`,'Q');
+      if(!hideX&&(xType==='direct'||xType==='topic'||!q.bound))o+=pill(4.35,y,0,esc(q.bound?q.keys.join(' | '):'未绑定'),'bind','key below')});
+    S.cons.forEach(cn=>{const y=cy(cn),cls=cn.down?'bad':cn.n>=3?'warn':cn.cur?'ok':'idle',t=cn.down?'宕机 · DOWN':`完成 ${cn.done} · 手上 ${cn.n}`;
+      o+=pill(CX,y,1.3,`<b>${esc(cn.name)}</b><span class="bd ${cls}">${t}</span>`,'C')});
+    ov.innerHTML=o;
+    statsEl.innerHTML=`<div>已发布<b>${S.pub}</b></div><div>已处理<b>${S.done}</b></div><div class="${S.drop?'warn':''}">未路由丢弃<b>${S.drop}</b></div><div class="${S.lost?'bad':''}">丢失<b>${S.lost}</b></div>`;
+    dirty=false;
+  }
+  const note=(t,tone='info')=>{hintEl.className='hint '+tone;hintEl.textContent=t};
+  function send(path,m,dur,arrive){S.tokens.push({path,m,t0:S.t,dur,arrive})}
+  function route(m){const hit=[];S.queues.forEach((q,i)=>{if(!q.bound)return;
+    if(xType==='default'?q.name===m.key:xType==='fanout'?true:xType==='direct'?q.keys.includes(m.key):q.keys.some(p=>topicMatch(p,m.key)))hit.push(i)});return hit}
+  function publish(key){
+    const m={id:++S.seq,key,ci:kIdx(key)};S.pub++;dirty=true;
+    const enter=i=>{S.queues[i].msgs.push({...m});dirty=true};
+    if(hideX){send(R.PQ(0),m,900,()=>enter(0));return}
+    send(R.PX(),m,500,()=>{const hit=route(m);
+      if(!hit.length){S.drop++;dirty=true;note(`routing key “${key}” 没有匹配任何队列，消息在交换机处被丢弃。`,'warn');send(R.DROP(),{...m,drop:1},700);return}
+      note(`routing key “${key}” → 投递到：${hit.map(i=>S.queues[i].name).join('、')}`);
+      hit.forEach(i=>send(R.XQ(i),{...m},550,()=>enter(i)))});
+  }
+  function giveBack(c,m){
+    if(S.autoAck){S.lost++;dirty=true;return}
+    send(R.QC(c).slice().reverse(),{...m,re:1},700,()=>{S.queues[c.q].msgs.unshift({...m,re:1});dirty=true});
+  }
+  function setDown(c,down){
+    if(down===c.down)return;c.down=down;dirty=true;
+    if(down){const ms=[...(c.cur?[c.cur]:[]),...c.inbox];c.cur=null;c.inbox=[];c.n-=ms.length;ms.forEach(m=>giveBack(c,m));
+      if(S.autoAck)note(`${c.name} 宕机：自动 ack 模式下，它手上的 ${ms.length} 条消息早已被视为处理完，永久丢失。`,'bad');
+      else note(`${c.name} 宕机：${ms.length} 条未确认的消息（红边）回到队列头部，交给其他消费者。`,'ok')}
+    else note(`${c.name} 恢复上线，重新开始接收消息。`);
+  }
+  function restart(){
+    S.flash=S.t+800;dirty=true;let n=0;
+    if(!S.durable)S.queues.forEach(q=>{n+=q.msgs.length;q.msgs=[]});S.lost+=n;
+    if(S.durable)note('Broker 重启：队列是 durable、消息是 persistent，就绪的消息都还在。','ok');
+    else note(`Broker 重启：没有持久化，队列中 ${n} 条消息全部丢失。`,'bad');
+  }
+  function dispatch(){
+    S.queues.forEach((q,qi)=>{let guard=50;
+      while(q.msgs.length&&guard--){
+        const cs=S.cons.filter(c=>c.q===qi&&!c.down&&(S.autoAck||!S.prefetch||c.n<S.prefetch));
+        if(!cs.length)break;
+        const c=cs[q.rr++%cs.length],m=q.msgs.shift();c.n++;dirty=true;
+        send(R.QC(c),m,500,()=>{if(c.down){c.n--;giveBack(c,m)}else c.inbox.push(m);dirty=true});
+      }});
+  }
+  function step(){
+    const T=S.t;
+    S.sched=S.sched.filter(x=>{if(T>=x.at){x.fn();return false}return true});
+    const arrived=[];S.tokens=S.tokens.filter(t=>{if(T>=t.t0+t.dur){arrived.push(t);return false}return true});
+    arrived.forEach(t=>t.arrive&&t.arrive());
+    S.cons.forEach(c=>{if(c.down)return;
+      if(c.cur&&T>=c.doneAt){c.done++;S.done++;c.cur=null;c.n--;dirty=true}
+      if(!c.cur&&c.inbox.length){c.cur=c.inbox.shift();c.t0=T;c.doneAt=T+c.speed;dirty=true}});
+    dispatch();
+  }
+  let last=performance.now();
+  function frame(now){
+    if(!svg.isConnected)return;
+    const dt=Math.min(100,now-last);last=now;
+    if(!GLOB.paused){S.t+=dt*GLOB.speed;step()}
+    if(dirty)draw();
+    let h='';
+    S.tokens.forEach(t=>{let f=Math.min(1,(S.t-t.t0)/t.dur);f=f<.5?2*f*f:1-(-2*f+2)**2/2;const g=at(t.path,f);
+      const z=t.m.drop?.15-f*.9:.12+Math.sin(Math.PI*f)*.22;h+=`<g opacity="${t.m.drop?(1-f).toFixed(2):1}">${cube(g[0],g[1],.34,.34,.34,mcol(t.m),z)}</g>`});
+    S.cons.forEach(c=>{if(!c.cur)return;const y=cy(c),p=Math.min(1,(S.t-c.t0)/c.speed),q=P(CX,y,0),w=Math.max(36,K*.9);
+      h+=cube(CX,y,.4,.4,.4,mcol(c.cur),1.12);
+      h+=`<rect x="${(q[0]-w/2).toFixed(1)}" y="${(q[1]+K*.95+4).toFixed(1)}" width="${w}" height="5" rx="2.5" fill="#DDE1F4"/><rect x="${(q[0]-w/2).toFixed(1)}" y="${(q[1]+K*.95+4).toFixed(1)}" width="${(w*p).toFixed(1)}" height="5" rx="2.5" fill="#4B53D6"/>`});
+    if(S.t<S.flash){const{c,d}=box,za=hideX?4.15:1.85;h+=`<polygon points="${pp([[za,c+.55],[8.5,c+.55],[8.5,d-.55],[za,d-.55]])}" fill="#E0565B" opacity="${((S.flash-S.t)/1600).toFixed(2)}"/>`}
+    tk.innerHTML=h;
+    requestAnimationFrame(frame);
+  }
+  const ro=new ResizeObserver(()=>{dirty=true});ro.observe(scene);
+  host.addEventListener('click',e=>{const n=e.target.closest('[data-n]');if(n&&host.contains(n))onInfo(n.dataset.n)});
+  note(cfg.hint||'点击场景里的方块或标签查看说明，然后用上面的按钮发送消息。');
+  requestAnimationFrame(frame);
+  return{S,publish,setDown,restart,note,
+    burst(n,key,gap=90){for(let i=0;i<n;i++)S.sched.push({at:S.t+i*gap,fn:()=>publish(typeof key==='function'?key(i):key)})},
+    addConsumer(q,name,speed){S.cons.push({id:'c'+S.cons.length,q,name,speed,n:0,inbox:[],cur:null,doneAt:0,t0:0,done:0,down:false});dirty=true},
+    setBound(i,b){S.queues[i].bound=b;dirty=true}};
+}
+
+/* ---------- 课程内容 ---------- */
+const code=(tabs)=>`<div class="code" data-code><div class="tabs">${tabs.map((t,i)=>`<button type="button" data-tab="${i}" aria-pressed="${i===0}">${t[0]}</button>`).join('')}<button type="button" class="cp">复制</button></div>${tabs.map((t,i)=>`<pre${i?' hidden':''}><code>${esc(t[1])}</code></pre>`).join('')}</div>`;
+
+const LESSONS=[
+{short:'为什么需要 MQ',title:'为什么需要消息队列',goal:'看清同步调用的痛点，理解消息队列带来的解耦、异步和削峰。',
+ sim:()=>({hideX:true,pName:'下单服务',queues:[{name:'orders'}],consumers:[{q:0,name:'库存服务',speed:1100}],prefetch:1}),
+ ctrls:[{b:'下 1 单',pri:1,run:c=>c.sim.publish('orders')},{b:'瞬间涌入 10 单',run:c=>c.sim.burst(10,'orders',70)},
+  {b:'加一个库存服务实例',run:c=>{const n=c.sim.S.cons.length;if(n<3){c.sim.addConsumer(0,'库存服务'+(n+1),1100);c.sim.note('新实例订阅同一个队列，大家一起分担积压')}else c.sim.note('演示里最多 3 个实例')}},{b:'重置',run:c=>c.mount()}],
+ body:`<p>先试试“瞬间涌入 10 单”：下单服务一口气发完就可以回应用户了，订单在 <code>orders</code> 队列里排队，库存服务按自己的节奏慢慢处理。再加一个实例，积压消化得更快。</p>
+<h3>没有消息队列时会怎样</h3>
+<p>下单服务直接用 HTTP 依次调用库存、积分、短信服务。只要其中一个变慢，用户就得一直等；其中一个宕机，整笔订单就失败；新增一个“发优惠券”的需求，还得改下单服务的代码。</p>
+<h3>消息队列带来的三件事</h3>
+<table><tr><th>好处</th><th>含义</th><th>上面的模拟里</th></tr>
+<tr><td>解耦</td><td>生产者只管发消息，不需要知道谁来处理、有几个处理者</td><td>加实例时，下单服务一行代码都不用改</td></tr>
+<tr><td>异步</td><td>先把消息放下就返回，耗时的工作在后台完成</td><td>10 单瞬间发完，处理在之后发生</td></tr>
+<tr><td>削峰</td><td>流量高峰先堆在队列里，消费者按能力匀速消化</td><td>“就绪”数先涨后落，库存服务没被压垮</td></tr></table>
+<div class="call"><b>代价也要知道：</b>系统多了一个组件要运维；数据变成“最终一致”；你还得处理消息丢失、重复消费、顺序等问题——后面几课会逐一讲。</div>
+<h3>RabbitMQ 是什么</h3>
+<p>RabbitMQ 是一个开源的<strong>消息代理（message broker）</strong>，用 Erlang 编写，最经典的协议是 AMQP 0-9-1（也支持 AMQP 1.0、MQTT、STOMP 等）。它像一座邮局：你把信交给它，它负责分拣、保管和投递。</p>`,
+ quiz:[
+  {q:'双十一零点流量暴涨，订单先进入队列再被慢慢处理。这主要体现了消息队列的哪个作用？',o:['削峰','解耦','持久化','加密'],a:0,e:'高峰流量被队列“缓冲”住，消费者按自己的速度处理，这就是削峰填谷。'},
+  {q:'引入消息队列后，下面哪一项<em>不是</em>常见的代价？',o:['需要处理重复消息','数据变为最终一致','系统多了一个要运维的组件','生产者必须知道每个消费者的地址'],a:3,e:'恰恰相反：生产者不需要知道消费者在哪，这正是“解耦”。'},
+  {q:'RabbitMQ 最经典的客户端协议是？',o:['AMQP 0-9-1','HTTP/3','gRPC','JDBC'],a:0,e:'RabbitMQ 最初就是为 AMQP 0-9-1 打造的，大多数客户端库（pika、Spring AMQP）都使用它。'}]},
+
+{short:'核心概念',title:'核心概念：一条消息的旅程',goal:'认识 Producer、Exchange、Binding、Queue、Consumer，以及 Connection 与 Channel。',
+ sim:()=>({xType:'direct',xName:'notify',pName:'用户服务',queues:[{name:'邮件队列',keys:['email']},{name:'短信队列',keys:['sms']}],consumers:[{q:0,name:'邮件服务',speed:900},{q:1,name:'短信服务',speed:900}],prefetch:1}),
+ ctrls:[{b:'发送 key = email',pri:1,run:c=>c.sim.publish('email')},{b:'发送 key = sms',run:c=>c.sim.publish('sms')},{b:'发送 key = push',run:c=>c.sim.publish('push')},{b:'重置',run:c=>c.mount()}],
+ body:`<p>点击场景里任意部件（包括地面上的 Broker 虚线区域）可以看它的说明。注意 <code>push</code> 这条消息：没有任何队列绑定这个键，它在交换机处就被丢掉了。</p>
+<h3>一条消息走过的路</h3>
+<p>生产者 → <strong>交换机</strong> →（按绑定规则）→ <strong>队列</strong> → 消费者。最重要的一点：<strong>生产者从不直接把消息发给队列</strong>，它只发给交换机，并附上一个 routing key（路由键）。</p>
+<h3>术语表</h3>
+<table class="stack"><thead><tr><th>术语</th><th>一句话解释</th></tr></thead><tbody>
+<tr><td>Producer</td><td>发送消息的应用</td></tr>
+<tr><td>Consumer</td><td>订阅队列、处理消息的应用</td></tr>
+<tr><td>Broker</td><td>RabbitMQ 服务器本身</td></tr>
+<tr><td>Exchange</td><td>按规则把消息分发到队列的“分拣员”，不存消息</td></tr>
+<tr><td>Queue</td><td>存放消息的缓冲区，先进先出</td></tr>
+<tr><td>Binding</td><td>交换机与队列之间的一条规则，可以带 binding key</td></tr>
+<tr><td>Routing key</td><td>生产者给每条消息贴的“地址标签”</td></tr>
+<tr><td>Connection</td><td>客户端到 broker 的一条 TCP 长连接，建立成本高</td></tr>
+<tr><td>Channel</td><td>在一个 Connection 里复用的轻量“虚拟连接”，所有操作都在 channel 上进行</td></tr>
+<tr><td>Virtual host</td><td>逻辑隔离的“租户”，各自有独立的交换机、队列和权限，默认是 <code>/</code></td></tr></tbody></table>
+<div class="call"><b>经验法则：</b>一个应用通常只开一个（或少量）Connection，每个线程用自己的 Channel。不要每发一条消息就新建一个连接。</div>`,
+ quiz:[
+  {q:'生产者发送消息时，消息首先交给谁？',o:['交换机（Exchange）','直接交给队列','直接交给消费者','写入磁盘文件'],a:0,e:'在 AMQP 模型里生产者只和交换机打交道，路由由交换机完成。'},
+  {q:'“在一个 TCP 连接里复用多个轻量通道”指的是？',o:['Channel','Connection','Virtual host','Binding'],a:0,e:'Channel 是建立在 Connection 之上的虚拟连接，开销很小。'},
+  {q:'Binding（绑定）描述的是什么？',o:['交换机与队列之间的路由规则','消费者与队列的 TCP 连接','生产者的身份认证','消息的过期时间'],a:0,e:'绑定告诉交换机：哪些消息应该送进这个队列。'}]},
+
+{short:'Hello World',title:'第一个队列：Hello World',goal:'用 Docker 启动 RabbitMQ，用 Python 或 Spring Boot 收发第一条消息。',
+ sim:()=>({xType:'default',xName:'""',pName:'send.py',queues:[{name:'hello'}],consumers:[{q:0,name:'receive.py',speed:700}],prefetch:1}),
+ ctrls:[{b:'发送到 hello',pri:1,run:c=>c.sim.publish('hello')},{b:'发送到 hallo（拼错了）',run:c=>c.sim.publish('hallo')},{b:'重置',run:c=>c.mount()}],
+ body:`<p>这里用的是<strong>默认交换机</strong>（名字是空字符串 <code>""</code>）。每个队列都会自动以“队列名”作为绑定键绑定到它，所以 routing key 写队列名，消息就会进入同名队列。拼错名字时，消息会被静默丢弃。</p>
+<h3>第 1 步：启动 RabbitMQ</h3>
+${code([['终端','docker run -d --name rabbitmq \\\n  -p 5672:5672 -p 15672:15672 \\\n  rabbitmq:4-management']])}
+<p><code>5672</code> 是 AMQP 端口，应用连这里；<code>15672</code> 是管理界面，浏览器打开 <code>http://localhost:15672</code>，默认账号 <code>guest</code> / <code>guest</code>（出于安全，guest 只允许从本机登录）。</p>
+<h3>第 2 步：发送与接收</h3>
+${code([['Python 发送',`# pip install pika
+import pika
+
+conn = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+ch = conn.channel()
+ch.queue_declare(queue='hello')          # 声明是幂等的，存在就复用
+ch.basic_publish(exchange='',            # 默认交换机
+                 routing_key='hello',    # = 队列名
+                 body='Hello World!')
+print('已发送')
+conn.close()`],['Python 接收',`import pika
+
+conn = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+ch = conn.channel()
+ch.queue_declare(queue='hello')
+
+def callback(ch, method, properties, body):
+    print('收到', body.decode())
+
+ch.basic_consume(queue='hello', on_message_callback=callback, auto_ack=True)
+print('等待消息，Ctrl+C 退出')
+ch.start_consuming()`],['Spring Boot',`// application.yml
+// spring:
+//   rabbitmq:
+//     host: localhost
+//     port: 5672
+//     username: guest
+//     password: guest
+
+@Configuration
+public class MqConfig {
+    @Bean
+    public Queue helloQueue() {
+        return new Queue("hello", true);   // durable
+    }
+}
+
+@Service
+public class Sender {
+    private final RabbitTemplate rabbitTemplate;
+    public Sender(RabbitTemplate rabbitTemplate) { this.rabbitTemplate = rabbitTemplate; }
+
+    public void send(String msg) {
+        rabbitTemplate.convertAndSend("hello", msg);  // 默认交换机，routing key = 队列名
+    }
+}
+
+@Component
+public class Receiver {
+    @RabbitListener(queues = "hello")
+    public void onMessage(String msg) {
+        System.out.println("收到 " + msg);
+    }
+}`]])}
+<div class="call"><b>为什么两边都要 queue_declare？</b>你无法保证谁先启动。两边都声明一次（参数一致），无论先后都能正常工作。</div>
+<h3>在管理界面里看看</h3>
+<ul><li><strong>Queues</strong> 页能看到 <code>hello</code> 队列，以及 Ready（等待投递）和 Unacked（已投递未确认）的数量。</li>
+<li>先只运行发送端几次，Ready 会增加；再启动接收端，数字会归零。</li></ul>`,
+ quiz:[
+  {q:'exchange 为空字符串、routing_key 为 "hello" 时，消息会去哪？',o:['名为 hello 的队列','所有队列','名为 hello 的交换机','直接丢弃'],a:0,e:'默认交换机按“队列名 = routing key”投递。'},
+  {q:'RabbitMQ 管理界面默认使用哪个端口？',o:['15672','5672','8080','25672'],a:0,e:'5672 是 AMQP 客户端端口，15672 是 management 插件的 Web 界面。'},
+  {q:'通过默认交换机发到一个不存在的队列名，会发生什么？',o:['消息被静默丢弃','自动创建这个队列','连接被断开','消息一直阻塞等待'],a:0,e:'没有匹配的队列时消息会被丢弃。需要感知的话，可以发送时设置 mandatory 标志让 broker 退回消息。'}]},
+
+{short:'工作队列',title:'工作队列：多个消费者分担任务',goal:'理解轮询分发、手动确认和 prefetch，让快慢不同的 worker 公平分活。',
+ sim:c=>({xType:'default',xName:'""',pName:'任务派发',queues:[{name:'tasks'}],consumers:[{q:0,name:'快 worker',speed:500},{q:0,name:'慢 worker',speed:2400}],prefetch:c.state.pf??0}),
+ ctrls:[{seg:'prefetch',opts:['不限制','= 1'],val:c=>c.state.pf===1?1:0,set:(c,i)=>{c.state.pf=i?1:0;c.mount()}},
+  {b:'派发 10 个任务',pri:1,run:c=>c.sim.burst(10,'tasks',60)},{b:'重置',run:c=>c.mount()}],
+ body:`<p>先在“不限制”下派发 10 个任务：RabbitMQ 按轮询一人一个地<strong>立即推送</strong>，慢 worker 手上压了一半任务，快 worker 早早闲着。切换到 <code>prefetch = 1</code> 再试：每个 worker 一次只拿一个，做完确认后才拿下一个，快的自然多干。</p>
+<h3>轮询分发（round-robin）</h3>
+<p>多个消费者订阅同一个队列时，每条消息只会交给<strong>其中一个</strong>消费者，默认依次轮流。这让你只需加机器就能水平扩展处理能力。</p>
+<h3>手动确认 + prefetch = 公平分发</h3>
+${code([['Python',`ch.queue_declare(queue='tasks', durable=True)
+ch.basic_qos(prefetch_count=1)            # 未确认的消息最多 1 条
+
+def callback(ch, method, properties, body):
+    do_work(body)
+    ch.basic_ack(delivery_tag=method.delivery_tag)   # 做完再确认
+
+ch.basic_consume(queue='tasks', on_message_callback=callback)  # 不再 auto_ack
+ch.start_consuming()`],['Spring Boot',`# application.yml
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        prefetch: 1            # Spring 默认是 250
+        concurrency: 2         # 每个实例开 2 个消费者线程`]])}
+<ul><li><strong>prefetch</strong>（QoS）限制一个消费者“手上未确认消息”的上限。</li>
+<li>它只在<strong>手动确认</strong>时生效；<code>auto_ack=True</code> 时消息一发出就算确认了，prefetch 管不住。</li>
+<li>prefetch 太小吞吐低，太大容易分配不均。任务耗时长就设小（1~10），任务很快可以设大一些（几十到几百）。</li></ul>`,
+ quiz:[
+  {q:'多个消费者订阅同一个队列，默认每条消息如何分配？',o:['轮流交给其中一个消费者','复制给每个消费者','随机丢给一个，可能重复','只发给最早连接的消费者'],a:0,e:'同一队列上的消费者是竞争关系，默认轮询，每条消息只投递给一个。'},
+  {q:'basic_qos(prefetch_count=1) 的含义是？',o:['消费者手上最多 1 条未确认消息，确认后才发下一条','队列最多存 1 条消息','每秒最多发送 1 条','只允许 1 个消费者'],a:0,e:'prefetch 限制的是“已投递但尚未 ack”的消息数量。'},
+  {q:'在 auto_ack=True 的情况下，prefetch 还起作用吗？',o:['不起作用','起作用，且更严格','只对第一条消息起作用','取决于队列长度'],a:0,e:'自动确认模式下消息发出即视为确认，不存在“未确认”数量，prefetch 自然失效。'}]},
+
+{short:'发布/订阅',title:'发布 / 订阅：fanout 交换机',goal:'一条消息同时通知多个下游系统，各自独立处理。',
+ sim:()=>({xType:'fanout',xName:'order.done',pName:'订单服务',queues:[{name:'邮件'},{name:'短信'},{name:'积分'}],consumers:[{q:0,name:'邮件服务',speed:900},{q:1,name:'短信服务',speed:1300},{q:2,name:'积分服务',speed:700}],prefetch:1}),
+ ctrls:[{b:'发布“订单完成”事件',pri:1,run:c=>c.sim.publish('order.done')},
+  {seg:'积分队列',opts:['已绑定','已解绑'],val:c=>c.state.unb?1:0,set:(c,i)=>{c.state.unb=!!i;c.sim.setBound(2,!i);c.sim.note(i?'积分队列解绑后，新事件不再复制给它（已有消息不受影响）':'积分队列重新绑定');renderCtrls(c)}},
+  {b:'重置',run:c=>{c.state.unb=false;c.mount();renderCtrls(c)}}],
+ body:`<p>每发布一次，fanout 交换机把消息<strong>复制</strong>到所有绑定它的队列，三个服务各收到一份。解绑积分队列再发布，看看它不再收到新事件——订单服务完全不需要改动。</p>
+<h3>工作队列 vs 发布订阅</h3>
+<table><tr><th>模式</th><th>一条消息被谁处理</th><th>典型用途</th></tr>
+<tr><td>工作队列</td><td>多个消费者中的<strong>一个</strong></td><td>分摊耗时任务</td></tr>
+<tr><td>发布订阅</td><td>每个订阅者<strong>各一份</strong></td><td>事件通知、广播</td></tr></table>
+<p>关键在于：发布订阅里<strong>每个订阅者有自己的队列</strong>。同一个服务部署多个实例时，这些实例共享该服务的队列，就又变回了工作队列——两种模式经常组合使用。</p>
+<h3>代码</h3>
+${code([['Python',`# 发布者：只声明交换机，不关心有哪些队列
+ch.exchange_declare(exchange='order.done', exchange_type='fanout', durable=True)
+ch.basic_publish(exchange='order.done', routing_key='', body=order_json)
+
+# 积分服务：声明自己的队列并绑定
+ch.queue_declare(queue='points', durable=True)
+ch.queue_bind(exchange='order.done', queue='points')`],['Spring Boot',`@Bean FanoutExchange orderDone() { return new FanoutExchange("order.done"); }
+@Bean Queue points() { return new Queue("points", true); }
+@Bean Binding bindPoints(Queue points, FanoutExchange orderDone) {
+    return BindingBuilder.bind(points).to(orderDone);
+}
+
+// 发布
+rabbitTemplate.convertAndSend("order.done", "", orderJson);`]])}
+<div class="call"><b>临时订阅者：</b>如果只想“在线时收消息，下线就不要了”（比如实时日志查看器），可以用 <code>queue_declare(queue='', exclusive=True)</code> 让 broker 生成一个随机名的独占队列，连接断开后自动删除。</div>
+<p>fanout 会<strong>忽略 routing key</strong>，所以上面发布时传空字符串即可。</p>`,
+ quiz:[
+  {q:'fanout 交换机如何处理 routing key？',o:['完全忽略，复制给所有绑定的队列','必须与绑定键完全相等','支持 * 和 # 通配','只看第一个单词'],a:0,e:'fanout 就是广播，路由键对它没有意义。'},
+  {q:'“订单完成”要通知邮件、短信、积分三个服务，且每个服务都有 3 个实例。最合适的结构是？',o:['1 个 fanout 交换机 + 3 个队列，每个服务的 3 个实例共享自己的队列','1 个队列，9 个实例一起消费','9 个队列，每个实例一个','3 个交换机，每个服务一个'],a:0,e:'服务之间是发布订阅（各一份），同一服务的多个实例之间是工作队列（分摊）。'},
+  {q:'把某个队列从 fanout 交换机解绑后，会发生什么？',o:['之后发布的消息不再进入它，已有消息不受影响','队列里的已有消息立即被删除','交换机停止工作','所有队列都收不到消息'],a:0,e:'绑定只影响之后的路由，不会改动队列中已有的消息。'}]},
+
+{short:'路由 direct & topic',title:'按规则路由：direct 与 topic',goal:'用 routing key 精确或模糊地选择消息该去哪些队列。',
+ sim:c=>c.state.mode==='topic'
+  ?{xType:'topic',xName:'orders',pName:'订单服务',queues:[{name:'中国订单',keys:['order.cn.*']},{name:'全部订单',keys:['order.#']},{name:'所有新建',keys:['*.*.created']}],consumers:[{q:0,name:'中国团队',speed:900},{q:1,name:'数据仓库',speed:700},{q:2,name:'风控',speed:1100}],prefetch:1}
+  :{xType:'direct',xName:'logs',pName:'应用日志',queues:[{name:'告警',keys:['error']},{name:'归档',keys:['info','warning','error']}],consumers:[{q:0,name:'告警服务',speed:900},{q:1,name:'归档服务',speed:600}],prefetch:1},
+ ctrls:[{seg:'交换机类型',opts:['direct','topic'],val:c=>c.state.mode==='topic'?1:0,set:(c,i)=>{c.state.mode=i?'topic':'direct';c.mount();renderCtrls(c)}},
+  {keyin:1,ph:c=>c.state.mode==='topic'?'例如 order.cn.created':'例如 error',presets:c=>c.state.mode==='topic'?['order.cn.created','order.us.paid','order.cn.paid.vip','order','user.cn.created']:['info','warning','error','debug']},
+  {b:'重置',run:c=>c.mount()}],
+ body:`<p>先在 direct 模式下分别发送 <code>info</code> 和 <code>error</code>：error 同时进入两个队列（一个队列可以有多个绑定键，多个队列也可以用同一个键）。再切到 topic，试试每个预设，猜猜它会进哪些队列。</p>
+<h3>direct：精确匹配</h3>
+<p>消息的 routing key 与绑定键<strong>完全相等</strong>才会投递。适合类别固定、数量不多的场景，比如日志级别、任务类型。</p>
+<h3>topic：按单词模糊匹配</h3>
+<ul><li>routing key 是用点分隔的单词，例如 <code>order.cn.created</code>。</li>
+<li><code>*</code> 恰好匹配<strong>一个</strong>单词；<code>#</code> 匹配<strong>零个或多个</strong>单词。</li>
+<li>绑定键为 <code>#</code> 时什么都匹配，效果等同 fanout；不含 <code>*</code> 和 <code>#</code> 时，效果等同 direct。</li></ul>
+<h3>匹配测试器</h3>
+<div class="tester"><div><label for="tp">绑定键（模式）</label><input id="tp" value="order.*.created" autocomplete="off"></div><div><label for="tkk">routing key</label><input id="tkk" value="order.cn.created" autocomplete="off"></div><output id="tout"></output></div>
+<h3>代码</h3>
+${code([['Python',`ch.exchange_declare(exchange='orders', exchange_type='topic', durable=True)
+
+# 消费方：中国团队只关心中国区的订单
+ch.queue_declare(queue='order-cn', durable=True)
+ch.queue_bind(exchange='orders', queue='order-cn', routing_key='order.cn.*')
+
+# 生产方
+ch.basic_publish(exchange='orders', routing_key='order.cn.created', body=payload)`],['Spring Boot',`@Bean TopicExchange orders() { return new TopicExchange("orders"); }
+@Bean Queue orderCn() { return new Queue("order-cn", true); }
+@Bean Binding bindCn(Queue orderCn, TopicExchange orders) {
+    return BindingBuilder.bind(orderCn).to(orders).with("order.cn.*");
+}
+
+rabbitTemplate.convertAndSend("orders", "order.cn.created", payload);`]])}
+<div class="call"><b>还有一种：</b>headers 交换机按消息头（而不是 routing key）匹配，用得较少；能用 topic 解决的通常用 topic。</div>`,
+ bind:(root)=>{const tp=$('#tp',root),tkk=$('#tkk',root),out=$('#tout',root);const f=()=>{const p=tp.value.trim(),k=tkk.value.trim();out.textContent=p&&k?(topicMatch(p,k)?`✔ “${k}” 匹配 “${p}”`:`✘ “${k}” 不匹配 “${p}”`):'请输入模式和 routing key';out.style.color=p&&k&&topicMatch(p,k)?'var(--ok)':'var(--bad)'};tp.oninput=tkk.oninput=f;f()},
+ quiz:[
+  {q:'topic 交换机中，绑定键 order.# 能匹配 routing key “order” 吗？',o:['能，# 可以匹配零个单词','不能，# 至少匹配一个单词','只有 direct 交换机才能','取决于队列是否持久化'],a:0,e:'# 匹配零个或多个单词，所以 order.# 能匹配 order、order.cn、order.cn.paid.vip。'},
+  {q:'哪个 routing key 能匹配绑定键 *.cn.*？',o:['order.cn.created','order.cn','cn.order.paid','order.cn.paid.vip'],a:0,e:'*.cn.* 要求恰好三个单词且中间是 cn。'},
+  {q:'topic 交换机上绑定键为 # 的队列，行为最像？',o:['fanout','direct','默认交换机','死信队列'],a:0,e:'# 匹配一切，相当于广播。'}]},
+
+{short:'可靠性',title:'可靠性：确认、持久化与死信',goal:'找出消息可能丢失的三个环节，并逐一堵上。',
+ sim:c=>({xType:'default',xName:'""',pName:'订单服务',queues:[{name:'orders'}],consumers:[{q:0,name:'C1',speed:1700},{q:0,name:'C2',speed:1700}],prefetch:2,autoAck:c.state.auto!==false,durable:!!c.state.dur}),
+ ctrls:[{seg:'确认',opts:['自动 ack','手动 ack'],val:c=>c.state.auto===false?1:0,set:(c,i)=>{c.state.auto=!i;c.mount();renderCtrls(c)}},
+  {seg:'持久化',opts:['关','开'],val:c=>c.state.dur?1:0,set:(c,i)=>{c.state.dur=!!i;c.mount();renderCtrls(c)}},
+  {b:'发 6 条订单',pri:1,run:c=>c.sim.burst(6,'orders',80)},
+  {b:c=>c.sim&&c.sim.S.cons[0].down?'恢复 C1':'让 C1 宕机',run:c=>{const x=c.sim.S.cons[0];c.sim.setDown(x,!x.down);renderCtrls(c)}},
+  {b:'重启 Broker',run:c=>c.sim.restart()},{b:'重置',run:c=>{c.mount();renderCtrls(c)}}],
+ body:`<p>做两个实验：<strong>①</strong> 自动 ack 下发 6 条，马上让 C1 宕机——它手上的消息永久丢失；换成手动 ack 再来一次，未确认的消息（带红边）回到队列交给 C2。<strong>②</strong> 持久化“关”时发几条再重启 Broker，就绪的消息全没了；打开持久化再试。</p>
+<h3>消息可能在哪里丢</h3>
+<table><tr><th>环节</th><th>风险</th><th>对策</th></tr>
+<tr><td>生产者 → Broker</td><td>网络抖动、broker 没收到</td><td>发布确认（publisher confirms），没收到确认就重发</td></tr>
+<tr><td>Broker 内部</td><td>重启或宕机，内存里的消息丢失</td><td>队列 durable + 消息 persistent；生产环境用 quorum 队列做多副本</td></tr>
+<tr><td>Broker → 消费者</td><td>处理到一半崩溃</td><td>手动 ack：处理成功后再确认</td></tr></table>
+${code([['Python',`ch.confirm_delivery()                                  # 开启发布确认
+ch.queue_declare(queue='orders', durable=True,
+                 arguments={'x-queue-type': 'quorum'})  # 多副本队列
+ch.basic_publish(exchange='', routing_key='orders', body=msg,
+                 properties=pika.BasicProperties(
+                     delivery_mode=pika.DeliveryMode.Persistent))`],['Spring Boot',`# application.yml
+spring:
+  rabbitmq:
+    publisher-confirm-type: correlated
+    listener:
+      simple:
+        acknowledge-mode: manual
+
+@RabbitListener(queues = "orders")
+public void onOrder(String body, Channel channel,
+                    @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+    try {
+        handle(body);
+        channel.basicAck(tag, false);
+    } catch (Exception e) {
+        channel.basicNack(tag, false, false);  // 不重回队列 → 进入死信
+    }
+}`]])}
+<h3>死信队列（DLX）</h3>
+<p>以下三种情况，消息会变成“死信”，被转发到队列配置的死信交换机：被消费者 <code>reject/nack</code> 且 <code>requeue=false</code>；消息 TTL 过期；队列超过最大长度。常见做法是把处理失败的消息送进死信队列，人工排查或延时重试，避免“失败→重回队列→又失败”的死循环。</p>
+${code([['Python',`ch.exchange_declare(exchange='dlx', exchange_type='direct')
+ch.queue_declare(queue='orders.dead', durable=True)
+ch.queue_bind(exchange='dlx', queue='orders.dead', routing_key='orders')
+
+ch.queue_declare(queue='orders', durable=True, arguments={
+    'x-dead-letter-exchange': 'dlx',
+    'x-dead-letter-routing-key': 'orders',
+    'x-message-ttl': 60000,          # 可选：60 秒未消费则过期
+})`]])}
+<div class="call"><b>要接受的现实：</b>开启确认之后，RabbitMQ 提供的是“至少一次”投递——网络问题可能导致同一条消息被处理两次。消费者要做<strong>幂等</strong>：用订单号等业务唯一 ID 去重，或让操作本身可重复执行。</div>`,
+ quiz:[
+  {q:'消费者处理到一半宕机，想让这条消息不丢，应该怎么做？',o:['使用手动 ack，处理成功后再确认','把 prefetch 设大一些','改用 fanout 交换机','开启自动 ack'],a:0,e:'未 ack 的消息在消费者断开后会重新入队，投递给其他消费者。'},
+  {q:'希望 Broker 重启后队列里的消息还在，需要？',o:['队列声明为 durable，并且消息设为 persistent','只要队列 durable 就够了','只要消息 persistent 就够了','开启 publisher confirms 即可'],a:0,e:'两者缺一不可：非 durable 队列重启后不存在，非 persistent 消息不会落盘。'},
+  {q:'下面哪种情况<em>不会</em>让消息进入死信交换机？',o:['消费者成功 ack','消息 TTL 过期','消费者 nack 且 requeue=false','队列超过最大长度'],a:0,e:'成功确认的消息会被正常删除，不会成为死信。'}]},
+
+{short:'实战与选型',title:'实战：排查、避坑与选型',goal:'把前七课串起来：判断该用哪种模式，知道上线后看什么、避开哪些坑。',
+ sim:null,
+ body:`<h3>上线后盯住两个数字</h3>
+<p>管理界面的 Queues 页（或命令行）里，每个队列有两个关键指标：</p>
+<ul><li><strong>Ready</strong>：在队列里等待投递的消息。持续上涨说明消费者跟不上——加消费者实例、优化处理逻辑，或检查是不是有消费者挂了。</li>
+<li><strong>Unacked</strong>：已经投递但还没确认。一直不降，通常是消费者忘了 ack、卡死，或 prefetch 设得过大。</li></ul>
+${code([['命令行','rabbitmqctl list_queues name messages_ready messages_unacknowledged consumers']])}
+<h3>新手最常踩的坑</h3>
+<table class="stack"><thead><tr><th>坑</th><th>后果</th><th>做法</th></tr></thead><tbody>
+<tr><td>手动 ack 模式下忘了 ack</td><td>Unacked 越积越多，消息不再下发</td><td>确保每条路径（包括异常）都 ack 或 nack</td></tr>
+<tr><td>失败就 requeue</td><td>同一条坏消息无限循环，刷屏占 CPU</td><td>nack 不重回队列，交给死信队列；记录重试次数</td></tr>
+<tr><td>每条消息新建连接</td><td>连接风暴，性能骤降</td><td>长连接复用，按线程开 channel</td></tr>
+<tr><td>用 guest 远程连接</td><td>登录被拒绝</td><td>为每个应用创建独立用户和 vhost</td></tr>
+<tr><td>在消息里塞大文件</td><td>内存和网络压力大</td><td>文件放对象存储，消息里只放引用</td></tr>
+<tr><td>假设消息只来一次</td><td>重复扣款、重复发货</td><td>消费者做幂等</td></tr></tbody></table>
+<h3>RabbitMQ 还是 Kafka？</h3>
+<table class="stack"><thead><tr><th>维度</th><th>RabbitMQ</th><th>Kafka</th></tr></thead><tbody>
+<tr><td>模型</td><td>消息代理：broker 推送，确认后删除</td><td>分布式日志：消费者拉取，按保留期保存</td></tr>
+<tr><td>路由</td><td>灵活：direct / topic / fanout / headers</td><td>按 topic 和分区</td></tr>
+<tr><td>回放历史</td><td>普通队列不支持（RabbitMQ Streams 可以）</td><td>原生支持，按 offset 重读</td></tr>
+<tr><td>擅长</td><td>任务分发、微服务间异步通信、复杂路由、RPC</td><td>海量事件流、日志采集、数据管道</td></tr></tbody></table>
+<p>简单判断：需要“把任务可靠地交给某个人去做”或灵活路由，选 RabbitMQ；需要“把海量事件记下来，让很多系统反复读取”，选 Kafka。</p>
+<h3>接下来可以学</h3>
+<ul><li>quorum 队列与集群：高可用的正确姿势</li><li>RabbitMQ Streams：可回放的消息流</li><li>延时重试：TTL + 死信的组合用法</li><li>官方教程：<a href="https://www.rabbitmq.com/tutorials">rabbitmq.com/tutorials</a>（有 Python、Java、Spring AMQP 等多种语言版本）</li></ul>`,
+ quizTitle:'场景挑战',quizSub:'读场景，选出最合适的方案。这是课程的结业测验。',
+ quiz:[
+  {q:'用户注册成功后，要同时发欢迎邮件、送新人优惠券、写审计日志，三者互不影响。',o:['fanout 交换机，每个下游一个队列','一个工作队列，三个服务一起消费','direct 交换机，routing key 写 email','让用户服务依次 HTTP 调用三个服务'],a:0,e:'一份事件、多个独立订阅者，就是发布订阅。'},
+  {q:'视频转码很耗时（每个 1~5 分钟），想让 5 台机器一起分担。',o:['工作队列 + 手动 ack + prefetch=1','fanout 交换机广播给 5 台','topic 交换机按视频格式路由','每台机器一个独立队列，轮流发送'],a:0,e:'竞争消费者分摊任务；耗时长的任务用 prefetch=1 保证公平。'},
+  {q:'日志系统：error 级别送告警队列，所有级别都进归档队列。',o:['direct 交换机，归档队列绑定多个键','fanout 交换机','默认交换机','两个独立的 broker'],a:0,e:'固定的几个类别，用 direct 精确匹配；一个队列可以绑定多个键。'},
+  {q:'订单事件的 key 形如 order.<地区>.<状态>，深圳团队只关心中国区的所有订单状态。',o:['topic 交换机，绑定 order.cn.*','direct 交换机，绑定 order.cn','fanout 交换机，消费端自己过滤','headers 交换机，按消息体内容匹配'],a:0,e:'层级化的 key + 通配，是 topic 的典型用法。'},
+  {q:'某些消息处理一直失败，既不想丢，也不想无限重试拖垮消费者。',o:['nack 且不重回队列，配置死信队列收集','nack 并 requeue=true','改用自动 ack','把 prefetch 设为 0'],a:0,e:'死信队列把“坏消息”隔离出来，方便排查或延时重试。'},
+  {q:'同一条“扣款”消息因网络问题被投递了两次，如何避免重复扣款？',o:['消费者用业务唯一 ID 做幂等去重','关闭 publisher confirms','把队列改为非持久化','使用 fanout 交换机'],a:0,e:'“至少一次”投递下重复不可完全避免，必须在业务层做幂等。'}]}
+];
+
+/* ---------- 进度 ---------- */
+const KEY='rmq-course-v1';let prog={};
+try{prog=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){prog={}}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(prog))}catch(e){}};
+const solved=n=>prog[n]||(prog[n]=[]);
+const isDone=n=>solved(n).length>=LESSONS[n-1].quiz.length;
+
+function renderNav(cur){
+  $('#nav').innerHTML=LESSONS.map((L,i)=>`<a href="#l${i+1}" class="${isDone(i+1)?'done':''}" ${cur===i+1?'aria-current="page"':''}><b>${i+1}</b>${L.short}</a>`).join('');
+  const d=LESSONS.filter((_,i)=>isDone(i+1)).length;
+  $('#pt').textContent=`已完成 ${d} / 8 课`;$('#pb').style.width=d/8*100+'%';
+  const a=$('#nav [aria-current]');if(a)a.scrollIntoView({block:'nearest',inline:'center'});
+}
+
+/* ---------- 控件 ---------- */
+function renderCtrls(c){
+  const box=$('.ctrls',c.root);if(!box)return;
+  box.innerHTML=c.L.ctrls.map((k,i)=>{
+    if(k.seg){const v=k.val(c);return `<div class="seg" role="group" aria-label="${k.seg}"><span>${k.seg}</span>${k.opts.map((o,j)=>`<button type="button" data-i="${i}" data-o="${j}" aria-pressed="${v===j}">${o}</button>`).join('')}</div>`}
+    if(k.keyin)return `<form class="keyin" data-i="${i}"><input name="k" placeholder="${esc(k.ph(c))}" aria-label="routing key" autocomplete="off" value="${esc(c.state.lastKey||'')}"><button class="b pri">发送</button></form><div class="chips">${k.presets(c).map(p=>`<button type="button" data-i="${i}" data-p="${esc(p)}">${esc(p)}</button>`).join('')}</div>`;
+    const lab=typeof k.b==='function'?k.b(c):k.b;return `<button type="button" class="b${k.pri?' pri':''}" data-i="${i}">${lab}</button>`}).join('')
+    +`<button type="button" class="b" data-g="pause">${GLOB.paused?'继续':'暂停'}</button><div class="seg" role="group" aria-label="速度">${[0.5,1,2].map(v=>`<button type="button" data-g="speed" data-v="${v}" aria-pressed="${GLOB.speed===v}">${v}×</button>`).join('')}</div>`;
+}
+function bindCtrls(c){
+  const box=$('.ctrls',c.root);
+  box.addEventListener('click',e=>{const g=e.target.closest('button[data-g]');
+    if(g){if(g.dataset.g==='pause')GLOB.paused=!GLOB.paused;else GLOB.speed=+g.dataset.v;renderCtrls(c);return}
+    const t=e.target.closest('button[data-i]');if(!t)return;const k=c.L.ctrls[+t.dataset.i];
+    if(t.dataset.p!=null){c.state.lastKey=t.dataset.p;c.sim.publish(t.dataset.p);const inp=$('input[name=k]',box);if(inp)inp.value=t.dataset.p;return}
+    if(k.seg){k.set(c,+t.dataset.o);renderCtrls(c);return}
+    k.run(c)});
+  box.addEventListener('submit',e=>{e.preventDefault();const v=e.target.k.value.trim();if(!v){c.sim.note('请先输入 routing key');return}c.state.lastKey=v;c.sim.publish(v)});
+}
+
+/* ---------- 课程页 ---------- */
+function quizHTML(L,n){
+  const s=solved(n);
+  return `<section class="quiz"><h3>${L.quizTitle||'小测验'}</h3><p>${L.quizSub||'答对全部题目即完成本课。选错了可以再试。'}</p>${L.quiz.map((q,i)=>{const ok=s.includes(i);
+    return `<div class="q" data-q="${i}"><div class="qt">${i+1}. ${q.q}</div><div class="opts">${q.o.map((o,j)=>`<button type="button" data-o="${j}" class="${ok&&j===q.a?'ok':''}" ${ok?'disabled':''}>${o}</button>`).join('')}</div><div class="ex" ${ok?'':'hidden'}>${ok?'<b>正确。</b>'+q.e:''}</div></div>`}).join('')}<div class="fin"></div></section>`;
+}
+function finMsg(root,n){const f=$('.fin',root);if(!f)return;
+  const all=LESSONS.every((_,i)=>isDone(i+1));
+  f.innerHTML=isDone(n)?`<div class="done-msg">${all?'全部 8 课已完成，恭喜你入门 RabbitMQ！可以试着在本地用 Docker 把第 5、6 课的例子真正跑一遍。':`第 ${n} 课完成！${n<8?'继续下一课吧。':''}`}</div>`:''}
+
+function show(n,scroll){
+  const L=LESSONS[n-1],root=$('#lesson');
+  root.innerHTML=`<div class="lhead"><div class="kick">第 ${n} 课 / 共 8 课</div><h2>${L.title}</h2><p>${L.goal}</p></div>
+  ${L.sim?`<div class="simcard"><div class="ctrls"></div><div class="simhost"></div><div class="info">点击场景中的方块或标签查看说明。小立方体是消息，颜色代表 routing key；带红边的是被重新投递的消息。</div></div>`:quizHTML(L,n).replace('class="quiz"','class="quiz" style="margin-top:8px"')}
+  <div class="body">${L.body}</div>${L.sim?quizHTML(L,n):''}
+  <nav class="pn">${n>1?`<a href="#l${n-1}">← 上一课：${LESSONS[n-2].short}</a>`:''}${n<8?`<a class="nx" href="#l${n+1}">下一课：${LESSONS[n].short} →</a>`:''}</nav>`;
+  const c={n,L,root,state:{},sim:null};
+  c.mount=()=>{c.sim=makeSim($('.simhost',root),L.sim(c),k=>{$('.info',root).innerHTML=INFO[k]||''})};
+  if(L.sim){c.mount();renderCtrls(c);bindCtrls(c)}
+  root.querySelectorAll('[data-code]').forEach(b=>b.addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+    if(t.classList.contains('cp')){const vis=[...b.querySelectorAll('pre')].find(p=>!p.hidden);if(navigator.clipboard)navigator.clipboard.writeText(vis.textContent).then(()=>{t.textContent='已复制';setTimeout(()=>t.textContent='复制',1500)},()=>{t.textContent='复制失败'});return}
+    const i=+t.dataset.tab;b.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.tab===i));b.querySelectorAll('pre').forEach((p,j)=>p.hidden=j!==i)}));
+  root.querySelectorAll('.q').forEach(qe=>qe.addEventListener('click',e=>{const t=e.target.closest('button[data-o]');if(!t||t.disabled)return;
+    const qi=+qe.dataset.q,q=L.quiz[qi],j=+t.dataset.o,ex=$('.ex',qe);ex.hidden=false;
+    if(j===q.a){t.classList.add('ok');qe.querySelectorAll('button').forEach(b=>b.disabled=true);ex.innerHTML='<b>正确。</b>'+q.e;
+      const s=solved(n);if(!s.includes(qi)){s.push(qi);save();renderNav(n);finMsg(root,n)}}
+    else{t.classList.add('bad');ex.innerHTML='<b class="no">不对，再想想。</b>'}}));
+  L.bind&&L.bind(root,c);
+  finMsg(root,n);renderNav(n);
+  if(scroll)window.scrollTo({top:0});
+  try{localStorage.setItem(KEY+'-last',n)}catch(e){}
+}
+const fromHash=()=>{const m=/^#l([1-8])$/.exec(location.hash);return m?+m[1]:null};
+window.addEventListener('hashchange',()=>{const n=fromHash();if(n)show(n,true)});
+let start=fromHash();if(!start){try{start=+localStorage.getItem(KEY+'-last')||1}catch(e){start=1}}
+show(Math.min(8,Math.max(1,start)),false);
+}
+</script>
+</body>
+</html>
